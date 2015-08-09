@@ -1,0 +1,46 @@
+- name: install django dependencies
+  hosts: default
+  sudo: True
+  vars:
+    selenium_jar_file: selenium-server-standalone-2.43.1.jar
+    selenium_version: 2.43
+  tasks:
+    - name: install git
+      apt: name=git update_cache=yes
+    - name: install pip3
+      apt: name=python3-pip update_cache=yes
+    - name: install django pip library
+      pip: name=django version=1.8 executable=pip3
+    - name: install selenium pip library
+      pip: name=selenium extra_args='--upgrade' executable=pip3
+    - name: install xvfbwrapper pip library
+      pip: name=xvfbwrapper executable=pip3
+    - name: install jre
+      apt: name=default-jre update_cache=yes
+    - name: install firefox
+      apt: name=firefox update_cache=yes
+    - name: install xvfb
+      apt: name=xvfb update_cache=yes
+    - name: add crontab entry for xvfb
+      cron: name='run xvfb' special_time=reboot job="sh -c 'Xvfb :99 -ac -screen 0 1024x768x8 > /tmp/xvfb.log 2>&1 &'"
+    - name: create selenium directory
+      file: path=/usr/lib/selenium state=directory
+    - name: download selenium jar
+      get_url: url=http://selenium-release.storage.googleapis.com/{{ selenium_version }}/{{ selenium_jar_file }} dest=/usr/lib/selenium/{{ selenium_jar_file }} mode=0440
+    - name: create selenium log directory
+      file: path=/var/log/selenium state=directory mode=0666
+    - name: copy selenium service script
+      template: src=templates/selenium.j2 dest=/etc/init.d/selenium mode=0755
+    - name: start selenium service
+      service: name=selenium state=started enabled=yes
+      notify: restart server
+  handlers:
+    - name: restart server
+      command: shutdown -r now "Restarting server"
+      async: 0
+      poll: 0
+      ignore_errors: true
+      notify: wait for server to come back
+    - name: wait for server to come back
+      local_action: wait_for host={{ inventory_hostname }} state=started
+      sudo: false
