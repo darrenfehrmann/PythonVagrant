@@ -5,6 +5,8 @@
     selenium_jar_file: selenium-server-standalone-2.43.1.jar
     selenium_version: 2.43
   tasks:
+    - name: upgrade all packages
+      apt: upgrade=dist
     - name: install git
       apt: name=git update_cache=yes
     - name: install pip3
